@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Base64 Input Viewer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2em;
+      background-color: #f9f9f9;
+    }
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 1em;
+      margin-bottom: 1em;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+    }
+    dt {
+      font-weight: bold;
+    }
+    dd {
+      margin: 0 0 1em 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>AutoOps Appointment Info</h1>
+  <div id="content"></div>
+
+  <script>
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    function createFieldBlock(title, obj) {
+      if (!obj) return '';
+
+      const entries = Object.entries(obj).filter(([_, v]) => v !== null);
+      if (entries.length === 0) return '';
+
+      const section = document.createElement('div');
+      section.className = 'section';
+
+      const header = document.createElement('h2');
+      header.textContent = title;
+      section.appendChild(header);
+
+      const dl = document.createElement('dl');
+      entries.forEach(([key, value]) => {
+        const dt = document.createElement('dt');
+        dt.textContent = key;
+
+        const dd = document.createElement('dd');
+        dd.textContent = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+
+      section.appendChild(dl);
+      return section;
+    }
+
+    function renderData(data) {
+      const content = document.getElementById('content');
+
+      content.appendChild(createFieldBlock('Customer', data.customerData));
+      content.appendChild(createFieldBlock('Vehicle', data.vehicleData));
+      content.appendChild(createFieldBlock('Appointment Window', {
+        start: data.promisedWindowStart,
+        end: data.promisedWindowEnd,
+        timeZone: data.timezone
+      }));
+
+      if (Array.isArray(data.issues) && data.issues.length > 0) {
+        data.issues.forEach((issue, index) => {
+          content.appendChild(createFieldBlock(`Issue ${index + 1}`, issue));
+        });
+      }
+    }
+
+    function main() {
+      const base64Input = getQueryParam('ao_appt_data');
+      if (!base64Input) {
+        document.getElementById('content').innerHTML = '<p style="color:red;">No "ao_appt_data" parameter provided in the URL.</p>';
+        return;
+      }
+
+      try {
+        const decoded = atob(decodeURIComponent(base64Input));
+        const json = JSON.parse(decoded);
+        renderData(json);
+      } catch (err) {
+        document.getElementById('content').innerHTML =
+          `<p style="color:red;">Failed to decode or parse base64Input: ${err.message}</p>`;
+      }
+    }
+
+    main();
+  </script>
+
+</body>
+</html>
